@@ -1,0 +1,45 @@
+<body></body>
+<script>
+  fetch('../wasm/mazegen.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{
+    console:{
+      log : (x)=>(console.log(x))
+    }
+  })).then(results => {
+    let main = results.instance.exports;
+    var view_scale = 4;
+    var wall_thick = 1;
+
+    let [w,h] = [64,64];
+    let ctx = document.createElement("canvas").getContext('2d');
+    [ctx.canvas.width,ctx.canvas.height] = [w*view_scale,h*view_scale];
+    ctx.fillStyle="white";
+    ctx.fillRect(0,0,512,512);
+    ctx.fillStyle="black"
+    main.set_seed((new Date()).getTime());
+    main.generate_maze(w,h);
+    
+    ctx.translate(-wall_thick/2,-wall_thick/2);
+    for (var i = 0; i < h; i++){
+      for (var j = 0; j < w; j++){
+        var v = main.get_cell(j,i);
+        if (!(v & 0b1000)){//left
+          ctx.fillRect(j*view_scale,i*view_scale,wall_thick,view_scale+wall_thick);
+        }
+        if (!(v & 0b0100)){//down
+          ctx.fillRect(j*view_scale,(i+1)*view_scale,view_scale+wall_thick,wall_thick);
+        }
+        if (!(v & 0b0010)){//up
+          ctx.fillRect(j*view_scale,i*view_scale,view_scale+wall_thick,wall_thick);
+        }
+        if (!(v & 0b0001)){//right
+          ctx.fillRect((j+1)*view_scale,i*view_scale,wall_thick,view_scale+wall_thick);
+        }
+      }
+    }
+    document.body.appendChild(ctx.canvas);
+
+  }).catch(console.error);
+</script>
+

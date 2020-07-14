@@ -1,0 +1,34 @@
+<body></body>
+<script>
+  fetch('../wasm/thinning.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{})).then(results => {
+    let main = results.instance.exports;
+    var img = new Image();
+    img.src = "assets/manuscript.png"
+    img.onload = function(){
+      let [w,h] = [img.width,img.height];
+      let ctx = document.createElement("canvas").getContext('2d');
+      [ctx.canvas.width,ctx.canvas.height] = [w,h];
+      ctx.drawImage(img,0,0);
+      var imgdata = ctx.getImageData(0,0,w,h);
+      for (var i = 0; i < h; i++){
+        for (var j = 0; j < w; j++){
+          main.set_pixel(w,j,i,imgdata.data[(i*w+j)*4]>128?1:0);
+        }
+      }
+      main.thinning_zs(w,h);
+      for (var i = 0; i < h; i++){
+        for (var j = 0; j < w; j++){
+          var v = main.get_pixel(w,j,i);
+          if (v){
+            imgdata.data[(i*w+j)*4+1]=0;
+            imgdata.data[(i*w+j)*4+2]=0;
+          }
+        }
+      }
+      ctx.putImageData(imgdata,0,0);
+      document.body.appendChild(ctx.canvas);
+    }
+  }).catch(console.error);
+</script>

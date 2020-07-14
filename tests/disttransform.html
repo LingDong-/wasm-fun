@@ -1,0 +1,45 @@
+<body></body>
+<script>
+  fetch('../wasm/disttransform.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{
+    console:{
+      log : (x)=>(console.log(x))
+    }
+  })).then(results => {
+    let main = results.instance.exports;
+    var img = new Image();
+    img.src = "assets/manuscript.png"
+    img.onload = function(){
+      let [w,h] = [img.width,img.height];
+      let ctx = document.createElement("canvas").getContext('2d');
+      [ctx.canvas.width,ctx.canvas.height] = [w,h];
+      ctx.drawImage(img,0,0);
+      var imgdata = ctx.getImageData(0,0,w,h);
+
+      main.setup(w,h);
+      
+      for (var i = 0; i < h; i++){
+        for (var j = 0; j < w; j++){
+          main.set_b(j,i,imgdata.data[(i*w+j)*4]>128?1:0);
+        }
+      }
+
+      main.dist_transform();
+      for (var i = 0; i < h; i++){
+        for (var j = 0; j < w; j++){
+          var d = main.get_dt(j,i);
+          var v = Math.max(0,255-Math.sqrt(d)*10);
+          imgdata.data[(i*w+j)*4]   = v;
+          imgdata.data[(i*w+j)*4+1] = v;
+          imgdata.data[(i*w+j)*4+2] = v;
+          imgdata.data[(i*w+j)*4+3] = 255;
+        }
+      }
+      console.log(main.mem)
+      ctx.putImageData(imgdata,0,0);
+      document.body.appendChild(ctx.canvas);
+    }
+  }).catch(console.error);
+</script>
+

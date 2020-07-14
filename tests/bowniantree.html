@@ -1,0 +1,41 @@
+<body></body>
+<script>
+  fetch('../wasm/browniantree.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{})).then(results => {
+    let main = results.instance.exports;
+    let [w,h] = [512,512];
+    let ctx = document.createElement("canvas").getContext('2d');
+    [ctx.canvas.width,ctx.canvas.height] = [w,h];
+    document.body.appendChild(ctx.canvas);
+    var imgdata = ctx.getImageData(0,0,w,h);
+
+    for (var i = 0; i < h; i++){
+      for (var j = 0; j < w; j++){
+        main.set_pixel(w,j,i,0);
+      }
+    }
+    main.set_pixel(w,Math.floor(j/2),Math.floor(i/2),1);
+    function animate(){
+      main.bt_batch(w,h,100);
+      var cnt = 0;
+      for (var i = 0; i < h; i++){
+        for (var j = 0; j < w; j++){
+          var v = main.get_pixel(w,j,i);
+          var u = (1-v)*255;
+          imgdata.data[(i*w+j)*4]   = u;
+          imgdata.data[(i*w+j)*4+1] = u;
+          imgdata.data[(i*w+j)*4+2] = u;
+          imgdata.data[(i*w+j)*4+3]=255;
+          if (v){cnt++}
+        }
+      }
+      ctx.putImageData(imgdata,0,0);
+      if (cnt < w*h/4){
+        setTimeout(animate,1);
+      }
+    }
+    animate();
+
+  }).catch(console.error);
+</script>

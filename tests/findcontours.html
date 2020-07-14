@@ -1,0 +1,63 @@
+<body></body>
+<script>
+  fetch('../wasm/findcontours.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{
+    console:{
+      log : (x)=>(console.log(x))
+    }
+  })).then(results => {
+    let main = results.instance.exports;
+    var img = new Image();
+    img.src = "assets/manuscript.png"
+    img.onload = function(){
+      let [w,h] = [img.width,img.height];
+      let ctx = document.createElement("canvas").getContext('2d');
+      [ctx.canvas.width,ctx.canvas.height] = [w,h];
+      ctx.drawImage(img,0,0);
+      var imgdata = ctx.getImageData(0,0,w,h);
+
+      main.setup(w,h,512);
+      for (var i = 0; i < h; i++){
+        for (var j = 0; j < w; j++){
+          main.set_ij(i,j,imgdata.data[(i*w+j)*4]>128?1:0);
+        }
+      }
+      var n = main.find_contours();
+      var contours = [];
+
+      for (var i = 0; i < n; i++){
+        var parent  = main.get_nth_contour_parent (i);
+        var is_hole = main.get_nth_contour_is_hole(i);
+        var offset  = main.get_nth_contour_offset (i);
+        var length  = main.get_nth_contour_length (i);
+        var vertices = [];
+        for (var j = 0 ; j < length; j++){
+          var v = main.get_nth_vertex(offset, j);
+          vertices.push([v%w,Math.floor(v/w)])
+        }
+        contours.push({
+          id:i,
+          parent,is_hole,vertices
+        })
+      }
+      console.log(contours);
+
+      for (var i = 0; i < contours.length; i++){
+        ctx.strokeStyle = `rgb(${Math.floor(Math.random()*255)} ${Math.floor(Math.random()*255)} ${Math.floor(Math.random()*255)})`;
+        // ctx.strokeStyle = contours[i].is_hole?'red':'lime'
+        ctx.beginPath();
+        for (var j = 0; j < contours[i].vertices.length; j++){
+          if (!j){
+            ctx.moveTo(...contours[i].vertices[j]);
+          }else{
+            ctx.lineTo(...contours[i].vertices[j]);
+          }
+        }
+        ctx.stroke();
+      }
+
+      document.body.appendChild(ctx.canvas);
+    }
+  }).catch(console.error);
+</script>
