@@ -1,0 +1,56 @@
+<body></body>
+<script>
+  function print_heap(mem){
+    var heap = new Uint8Array(mem.buffer);
+    
+    function unpack_hdr(ptr){
+      // lil endian
+      var hdr =  heap[ptr] | (heap[ptr+1]<<8) | (heap[ptr+2]<<16) | (heap[ptr+3]<<24);
+      return [(hdr & 0xFFFFFFFC), (hdr & 1)];
+    }
+    var ptr = 0;
+    console.log("==== HEAP START ====")
+
+    while (ptr < heap.length){
+      console.log("--------------------")
+      var [size,free] = unpack_hdr(ptr);
+      
+      console.log("[HEADER] SIZE:"+size+" IS_FREE:"+free);
+      var ftr = ptr + size + 4;
+      var cnt = 0;
+      for (var i = ptr+4; i < ftr; i++){
+        if (heap[i]){
+          cnt ++;
+        }
+      }
+      // console.log("[PAYLOAD] #NON_ZERO_BYTES:"+cnt);
+      ;[size,free] = unpack_hdr(ftr);
+      console.log("[FOOTER] SIZE:"+size+" IS_FREE:"+free);
+      ptr = ftr + 4;
+    }
+    console.log("====  HEAP END  ====")
+  }
+
+  fetch('../wasm/malloc.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{
+    console:{
+      log : (x)=>(console.log(x))
+    }
+  })).then(results => {
+    let main = results.instance.exports;
+    main.init();
+    // main.extend();
+    var p0 = main.malloc(10);
+    var p1 = main.malloc(120);
+    var p2 = main.malloc(100);
+    var p3 = main.malloc(5);
+    var p4 = main.malloc(65500*2);
+    main.free(p1);
+    main.free(p2);
+    
+    console.log(main.mem);
+    print_heap(main.mem);
+  }).catch(console.error);
+</script>
+
