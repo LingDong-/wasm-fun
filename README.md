@@ -33,3 +33,5 @@ I think WebAssembly is the sort of language where the beauty is derived from its
 | ![](screenshots/mazegen.png) | Generate mazes using Wilson's algorithm, which guarantees an unbiased sample from the uniform distribution over all mazes. |
 |  |  [**malloc.wat**](wat/malloc.wat) |
 | ![](screenshots/malloc.png) | Very baseline 32-bit implicit-free-list first-fit malloc. |
+|  |  [**traceskeleton.wat**](wat/traceskeleton.wat) |
+| ![](screenshots/traceskeleton.png) | Retrieve topological skeleton as a set of polylines from binary images. [Original algorithm](https://github.com/LingDong-/skeleton-tracing). Includes a malloc implementation and a linked list implementation. ~300% faster than the version complied with emscripten (and ~10x smaller), ~500% faster than vanilla Javascript. |
