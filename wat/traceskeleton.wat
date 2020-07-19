@@ -1644,12 +1644,19 @@
     (global.set $im_ptr (call $malloc (i32.mul (global.get $W) (global.get $H))))
   )
 
+  ;; exported API's
+
+  ;; global parameters
   (export "MAX_ITER"       (global $MAX_ITER))
   (export "CHUNK_SIZE"     (global $CHUNK_SIZE))
 
+  ;; input image I/O
   (export "im_set"         (func   $im_set))
   (export "im_get"         (func   $im_get))
-  (export "setup"          (func   $setup))
+
+  ;; datastructure I/O
+
+  ;; polylines
   (export "pl_new"         (func   $pl_new))
   (export "pl_get_head"    (func   $pl_get_head))
   (export "pl_get_tail"    (func   $pl_get_tail))
@@ -1664,13 +1671,17 @@
   (export "pl_add_pt"      (func   $pl_add_pt))
   (export "pls_destroy"    (func   $pls_destroy))
 
+  ;; points
   (export "pt_get_x"       (func   $pt_get_x))
   (export "pt_get_y"       (func   $pt_get_y))
   (export "pt_get_next"    (func   $pt_get_next))
 
+  ;; main functions
+  (export "setup"          (func   $setup))
   (export "thinning_zs"    (func   $thinning_zs))
   (export "trace_skeleton" (func   $trace_skeleton))
 
+  ;; heap
   (export "mem"            (memory $mem    ))
 
 )
