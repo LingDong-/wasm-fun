@@ -19,7 +19,7 @@ I think WebAssembly is the sort of language where the beauty is derived from its
 
 ## Overview
 
-| | |
+| <img width="500"/> | |
 |---|---|
 |  |  [**thinning.wat**](wat/thinning.wat) |
 | ![](screenshots/thinning.png) | Skeletonization/thinning of binary images. Implements Zhang-Suen (1984). [Paper](http://agcggs680.pbworks.com/f/Zhan-Suen_algorithm.pdf) |
