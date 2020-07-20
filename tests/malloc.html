@@ -39,13 +39,32 @@
     }
   })).then(results => {
     let main = results.instance.exports;
+    
+
     main.init();
     // main.extend();
     var p0 = main.malloc(10);
     var p1 = main.malloc(120);
     var p2 = main.malloc(100);
-    var p3 = main.malloc(5);
-    var p4 = main.malloc(65500*2);
+    var p3 = main.malloc(4);
+
+    var p4 = main.malloc(100);
+    var p5 = main.malloc(100);
+    main.free(p4);
+    {
+      let heap = new Uint8Array(main.mem.buffer);
+      heap[p3] = 1;
+      heap[p3+1] = 2;
+      heap[p3+2] = 3;
+      heap[p3+3] = 4;
+      let p5 = main.realloc(p3,11);
+      console.log(heap[p5]);
+      console.log(heap[p5+1]);
+      console.log(heap[p5+2]);
+      console.log(heap[p5+3]);
+    }
+
+    var p6 = main.malloc(65500*2);
     main.free(p1);
     main.free(p2);
     

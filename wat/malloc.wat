@@ -6,7 +6,7 @@
 ;;--------------------------------------------------------;;
 
 (module
-
+  (import "console" "log" (func $log (param i32)))
   ;; IMPLICIT FREE LIST:
   ;; Worse utilization and throughput than explicit/segregated, but easier
   ;; to implement :P
@@ -353,12 +353,114 @@
     ))
 
   )
+  ;; copy a block of memory over, from src pointer to dst pointer
+  ;; WebAssembly seems to be planning to support memory.copy
+  ;; until then, this function uses a loop and i32.store8/load8
+  (func $memcpy (param $dst i32) (param $src i32) (param $n_bytes i32)
+    (local $ptr i32)
+    (local $offset i32)
+    (local $data i32)
+    (local.set $offset (i32.const 0))
 
+    loop $cpy
+      (local.set $data (i32.load8_u (i32.add (local.get $src) (local.get $offset))))
+      (i32.store8 (i32.add (local.get $dst) (local.get $offset)) (local.get $data))
+
+      (local.set $offset (i32.add (local.get $offset) (i32.const 1)))
+      (br_if $cpy (i32.lt_u (local.get $offset) (local.get $n_bytes)))
+    end
+  )
+
+  ;; reallocate memory to new size
+  ;; currently does not support contraction
+  ;; nothing will happen if n_bytes is smaller than current payload size
+  (func $realloc (param $ptr i32) (param $n_bytes i32) (result i32)
+    (local $hdr i32)
+    (local $next_hdr i32)
+    (local $next_ftr i32)
+    (local $next_size i32)
+    (local $ftr i32)
+    (local $size i32)
+    (local $rest_hdr i32)
+    (local $rest_size i32)
+    (local $new_ptr i32)
+
+    (local.set $hdr (i32.sub (local.get $ptr) (i32.const 4)))
+    (local.set $size (call $hdr_get_size (local.get $hdr)))
+
+    (if (i32.gt_u (local.get $n_bytes) (local.get $size)) (then) (else
+      (local.get $ptr)
+      return
+    ))
+
+    ;; payload size is aligned to multiple of 4
+    (local.set $n_bytes (call $align4 (local.get $n_bytes)))
+
+    (local.set $next_hdr (i32.add (i32.add (local.get $hdr) (local.get $size)) (i32.const 8)))
+
+    ;; Method I: try to expand the current block
+
+    ;; check that we're not already the last block
+    (if (i32.lt_u (local.get $next_hdr) (global.get $max_addr) )(then
+      (if (call $hdr_get_free (local.get $next_hdr)) (then
+
+        (local.set $next_size (call $hdr_get_size (local.get $next_hdr)))
+        (local.set $rest_size (i32.sub 
+          (local.get $next_size)
+          (i32.sub (local.get $n_bytes) (local.get $size))
+        ))
+        (local.set $next_ftr (i32.add (i32.add (local.get $next_hdr) (local.get $next_size)) (i32.const 4)))
+
+        ;; next block is big enough to be split into two
+        (if (i32.gt_s (local.get $rest_size) (i32.const 0) ) (then
+          
+          (call $hdr_set_size (local.get $hdr) (local.get $n_bytes))
+          
+          (local.set $ftr (i32.add (i32.add (local.get $hdr) (local.get $n_bytes) ) (i32.const 4)))
+          (call $hdr_set_size (local.get $ftr) (local.get $n_bytes))
+          (call $hdr_set_free (local.get $ftr) (i32.const 0))
+
+          (local.set $rest_hdr (i32.add (local.get $ftr) (i32.const 4) ))
+          (call $hdr_set_size (local.get $rest_hdr) (local.get $rest_size))
+          (call $hdr_set_free (local.get $rest_hdr) (i32.const 1))
+
+          (call $hdr_set_size (local.get $next_ftr) (local.get $rest_size))
+          (call $hdr_set_free (local.get $next_ftr) (i32.const 1))
+
+          (local.get $ptr)
+          return
+
+        ;; next block is not big enough to be split, but is
+        ;; big enough to merge with the current one into one
+        )(else (if (i32.gt_s (local.get $rest_size) (i32.const -9) ) (then
+        
+          (local.set $size (i32.add (i32.add (local.get $size) (i32.const 8) ) (local.get $next_size)))
+          (call $hdr_set_size (local.get $hdr) (local.get $size))
+          (call $hdr_set_size (local.get $next_ftr) (local.get $size))
+          (call $hdr_set_free (local.get $next_ftr) (i32.const 0))
+
+          (local.get $ptr)
+          return
+        ))))
+
+      ))
+    ))
+
+    ;; Method II: allocate a new block and copy over
+
+    (local.set $new_ptr (call $malloc (local.get $n_bytes)))
+    (call $memcpy (local.get $new_ptr) (local.get $ptr) (local.get $n_bytes))
+    (call $free (local.get $ptr))
+    (local.get $new_ptr)
+
+  )
 
   ;; exported API's
   (export "init"    (func   $init   ))
   (export "extend"  (func   $extend ))
   (export "malloc"  (func   $malloc ))
   (export "free"    (func   $free   ))
+  (export "memcpy"  (func   $memcpy ))
+  (export "realloc" (func   $realloc))
   (export "mem"     (memory $mem    ))
 )
