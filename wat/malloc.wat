@@ -6,7 +6,7 @@
 ;;--------------------------------------------------------;;
 
 (module
-  (import "console" "log" (func $log (param i32)))
+
   ;; IMPLICIT FREE LIST:
   ;; Worse utilization and throughput than explicit/segregated, but easier
   ;; to implement :P

@@ -35,3 +35,5 @@ I think WebAssembly is the sort of language where the beauty is derived from its
 | ![](screenshots/malloc.png) | Very baseline 32-bit implicit-free-list first-fit malloc. |
 |  |  [**traceskeleton.wat**](wat/traceskeleton.wat) |
 | ![](screenshots/traceskeleton.png) | Retrieve topological skeleton as a set of polylines from binary images. [Original algorithm](https://github.com/LingDong-/skeleton-tracing). Includes a malloc implementation and a linked list implementation. ~300% faster than the version complied with emscripten (and ~10x smaller), ~500% faster than vanilla Javascript. |
+|  |  [**containers.wat**](wat/containers.wat) |
+| ![](screenshots/containers.png) | Implements STL-like polymorphic container types `arr<T>` (continous resizable array), `list<T>` (doubly linked list) and `map<T,T>` (hash table). |

@@ -777,7 +777,7 @@
     (if (i32.eqz (call $pl_get_head (local.get $q)))(then
       (call $pl_set_head (local.get $q) (local.get $p))
     )(else
-      (call $pl_set_next (call $pl_get_tail (local.get $q)) (local.get $p))
+      (call $pt_set_next (call $pl_get_tail (local.get $q)) (local.get $p))
     ))
     (call $pl_set_tail (local.get $q) (local.get $p))
     (call $pl_set_size (local.get $q) (i32.add (call $pl_get_size (local.get $q)) (i32.const 1)))
@@ -889,7 +889,7 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;                                  ;;
   ;;                                  ;;
-  ;;          MAIN ALOGIRHTM          ;;
+  ;;          MAIN ALGORITHM          ;;
   ;;                                  ;;
   ;;                                  ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

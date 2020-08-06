@@ -1,0 +1,391 @@
+<body></body>
+<script>
+  function print_heap(mem){
+    var heap = new Uint8Array(mem.buffer);
+    
+    function unpack_hdr(ptr){
+      // lil endian
+      var hdr =  heap[ptr] | (heap[ptr+1]<<8) | (heap[ptr+2]<<16) | (heap[ptr+3]<<24);
+      return [(hdr & 0xFFFFFFFC), (hdr & 1)];
+    }
+    var ptr = 0;
+    console.log("==== HEAP START ====")
+
+    while (ptr < heap.length){
+      console.log("--------------------")
+      var [size,free] = unpack_hdr(ptr);
+      
+      console.log("[HEADER] SIZE:"+size+" IS_FREE:"+free);
+      var ftr = ptr + size + 4;
+      var cnt = 0;
+      for (var i = ptr+4; i < ftr; i++){
+        if (heap[i]){
+          cnt ++;
+        }
+      }
+      // console.log("[PAYLOAD] #NON_ZERO_BYTES:"+cnt);
+      ;[size,free] = unpack_hdr(ftr);
+      console.log("[FOOTER] SIZE:"+size+" IS_FREE:"+free);
+      ptr = ftr + 4;
+    }
+    console.log("====  HEAP END  ====")
+  }
+
+  function read32(heap,ptr){
+    return heap[ptr] | (heap[ptr+1]<<8) | (heap[ptr+2]<<16) | (heap[ptr+3]<<24);
+  }
+  function write32(heap,ptr,val){
+    heap[ptr] = val & 255;
+    heap[ptr+1] = (val >> 8) & 255;
+    heap[ptr+2] = (val >> 16) & 255;
+    heap[ptr+3] = (val >> 24) & 255;
+  }
+
+  function test_arr(main){
+    var heap = new Uint8Array(main.mem.buffer);
+
+    function print_arr(a){
+      let l = main.arr_length(a);
+      let s = "["+l+"]={";
+      for (var i = 0; i < l; i++){
+        s += (i?",":"")+read32(heap,main.arr_at(a,i));
+      }
+      s+="}"
+      console.log(s);
+    }
+
+    function test_push(){
+      let a = main.arr_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.arr_push(a);
+        write32(heap,ptr,i*100);
+      }
+      print_arr(a);
+      main.arr_free(a);
+    }
+
+    function test_reverse(){
+      let a = main.arr_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.arr_push(a);
+        write32(heap,ptr,i*100);
+      }
+      main.arr_reverse(a);
+      print_arr(a);
+      main.arr_free(a);
+    }
+
+    function test_concat(){
+      let a = main.arr_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.arr_push(a);
+        write32(heap,ptr,i*100);
+      }
+      let b = main.arr_new(4);
+      for (var i = 0; i < 5; i++){
+        let ptr = main.arr_push(b);
+        write32(heap,ptr,i*2);
+      }
+      main.arr_concat(a,b);
+      print_arr(a);
+      
+      main.arr_free(a);
+      main.arr_free(b);
+    }
+
+    function test_slice(){
+      let a = main.arr_new(4);
+      for (var i = 0; i < 100; i++){
+        let ptr = main.arr_push(a);
+        write32(heap,ptr,i*100);
+      }
+      let b = main.arr_slice(a,10,20);
+      let c = main.arr_slice(a,50,70);
+      let d = main.arr_slice(c,0,10);
+      let e = main.arr_slice(a,-10,-1);
+
+      print_arr(b);
+      print_arr(c);
+      print_arr(d);
+      print_arr(e);
+
+      main.arr_free(a);
+      main.arr_free(b);
+      main.arr_free(c);
+      main.arr_free(d);
+      main.arr_free(e);
+    }
+
+    function test_remove(){
+      let a = main.arr_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.arr_push(a);
+        write32(heap,ptr,i*100);
+      }
+      main.arr_remove(a,4);
+      main.arr_remove(a,8);
+      print_arr(a);
+      main.arr_clear(a);
+      print_arr(a);
+
+      main.arr_free(a);
+    }
+
+    function test_insert(){
+      let a = main.arr_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.arr_push(a);
+        write32(heap,ptr,i*100);
+      }
+      let ptr = main.arr_insert(a,4);
+      write32(heap,ptr,42);
+
+      ptr = main.arr_insert(a,8);
+      write32(heap,ptr,13);
+
+      print_arr(a);
+
+      main.arr_free(a);
+    }
+
+    test_push();
+    test_reverse();
+    test_concat();
+    test_slice();
+    test_remove();
+    test_insert();
+    print_heap(main.mem);
+  }
+
+
+  function test_list(main){
+    var heap = new Uint8Array(main.mem.buffer);
+
+    function print_list(a){
+      let it = main.list_head(a);
+      let l = main.list_length(a);
+      let s = "["+l+"]={";
+      while (it){
+      // for (var i = 0; i < l; i++){
+        s += read32(heap,it);
+        it = main.list_next(it);
+        if (it){
+          s += ",";
+        }
+      }
+      s+="}"
+      console.log(s);
+    }
+
+    function test_push(){
+      let a = main.list_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.list_push(a);
+        write32(heap,ptr,i*100);
+      }
+      print_list(a);
+      main.list_free(a);
+    }
+
+    function test_reverse(){
+      let a = main.list_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.list_push(a);
+        write32(heap,ptr,i*100);
+      }
+      main.list_reverse(a);
+      print_list(a);
+      main.list_free(a);
+    }
+
+    function test_concat(){
+      let a = main.list_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.list_push(a);
+        write32(heap,ptr,i*100);
+      }
+      let b = main.list_new(4);
+      for (var i = 0; i < 5; i++){
+        let ptr = main.list_push(a);
+        write32(heap,ptr,i*2);
+      }
+      main.list_concat(a,b);
+      print_list(a);
+      main.list_free(a);
+    }
+
+    function test_insert(){
+      let a = main.list_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.list_push(a);
+        write32(heap,ptr,i*100);
+      }
+      let h = main.list_head(a);
+      let ptr = main.list_insert_l(a,h);
+      write32(heap,ptr,42);
+      
+      ptr = main.list_insert_r(a,h);
+      write32(heap,ptr,21);
+
+      let t = main.list_tail(a);
+      ptr = main.list_insert_r(a,t);
+      write32(heap,ptr,84);
+
+      t = main.list_tail(a);
+      t = main.list_prev(t);
+      t = main.list_prev(t);
+      ptr = main.list_insert_l(a,t);
+      write32(heap,ptr,168);
+
+      ptr = main.list_insert_r(a,t);
+      write32(heap,ptr,11);
+
+      print_list(a);
+      main.list_free(a);
+    }
+
+    function test_remove(){
+      let a = main.list_new(4);
+      for (var i = 0; i < 10; i++){
+        let ptr = main.list_push(a);
+        write32(heap,ptr,i*100);
+      }
+      let it = main.list_head(a);
+      it = main.list_next(it);
+      it = main.list_next(it);
+      main.list_remove(a,it);
+
+      it = main.list_tail(a);
+      main.list_remove(a,it);
+
+      it = main.list_head(a);
+      main.list_remove(a,it);
+
+      print_list(a);
+
+      main.list_clear(a);
+
+      print_list(a);
+
+      main.list_free(a);
+    }
+
+    test_push();
+    test_reverse();
+    test_concat();
+    test_insert();
+    test_remove();
+    print_heap(main.mem);
+  }
+
+  function test_map(main){
+
+    var heap = new Uint8Array(main.mem.buffer);
+
+    function print_map(a){
+      let it = main.map_iter_new(a);
+      let s = "{"
+      while (it){
+      // for (var i = 0; i < 100; i++){
+      //   if (!it){
+      //     break;
+      //   }
+        // console.log(it)
+        let k = main.map_iter_key_i(it);
+        let v = read32(heap,main.map_iter_val(it));
+        s += k+":"+v;
+        it = main.map_iter_next(a,it);
+        // console.log(it)
+        if (it){
+          s += ",";
+        }
+      }
+      s+="}"
+      console.log(s);
+    }
+
+    function test_simple(){
+
+      let a = main.map_new(10);
+
+      let q = main.malloc(4);
+      write32(heap,q,42);
+
+      let ptr = main.map_set_h(a, q, 4, 4);
+      write32(heap,ptr,13);
+
+      main.free(q);
+
+      let qtr = main.map_set_i(a, 12, 4);
+      write32(heap,qtr,5)
+
+      let p = main.map_get_h(a, q, 4);
+      console.log(read32(heap,p));
+      
+      let b = main.map_get_i(a,12);
+      console.log(read32(heap,b));
+
+      let c = main.map_get_i(a,42);
+      console.log(read32(heap,c));
+
+      main.map_remove_i(a,42);
+
+      print_map(a);
+
+      main.map_clear(a);
+      print_map(a);
+      main.map_free(a);
+    }
+
+    function test_batch(){
+      let obj = {
+        2:2,
+        12:13,
+        14:15,
+        16:17,
+        29:12,
+        45:9898,
+        1825:1,
+      }
+
+      let a = main.map_new(10);
+
+      for (var k in obj){
+        let ptr = main.map_set_i(a, k, 4);
+        write32(heap,ptr,obj[k]);
+      }
+      print_map(a);
+
+      for (var k in obj){
+        let ptr = main.map_get_i(a, k);
+        console.log(k,obj[k],'=',read32(heap,ptr));
+      }
+
+      main.map_free(a);
+    }
+
+    test_simple();
+    test_batch();
+    print_heap(main.mem);
+    // console.log(heap.slice(0,100).join(","));
+  }
+
+
+  fetch('../wasm/containers.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{
+    console:{
+      log : (x)=>(console.log(x))
+    }
+  })).then(results => {
+    
+    let main = results.instance.exports;
+    
+    test_arr(main);
+    test_list(main);
+    test_map(main);
+
+  }).catch(console.error);
+
+</script>
+
