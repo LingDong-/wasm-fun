@@ -1,0 +1,41 @@
+<body></body>
+<script>
+  fetch('../wasm/random.wasm').then(response =>
+    response.arrayBuffer()
+  ).then(bytes => WebAssembly.instantiate(bytes,{
+  })).then(results => {
+    let main = results.instance.exports;
+    main.pnseed(0x5EED);
+    main.zigset(0x5EED);
+
+    let ctx = document.createElement("canvas").getContext('2d');
+    ctx.canvas.width =256;
+    ctx.canvas.height = 256;
+    let t = 0;
+
+    let bins = new Array(40).fill(0);
+    for (var i = 0; i < 10000; i++){
+      let r = main.rnor();
+      let b = Math.min(Math.max(Math.floor(r*5)+20,0),39);
+      bins[b]++;
+    }
+    console.log(bins);
+
+    function render(){
+      requestAnimationFrame(render);
+      for (var i = 0; i < 256; i++){
+        for (var j = 0; j < 256; j++){
+          let c = ~~(main.pnoise(1+i*0.05,1+j*0.05,t*0.1)*255);
+          ctx.fillStyle = `rgb(${c},${c},${c})`;
+          ctx.fillRect(j,i,1,1);
+        }
+      }
+      t++;
+    }
+    render();
+    console.log(main.mem);
+    document.body.appendChild(ctx.canvas);
+
+  }).catch(console.error);
+</script>
+
